@@ -1,0 +1,11 @@
+# compose-watchdog crontab 示例
+#
+# 用法：crontab -e 粘贴下面一行（换成你的容器名与路径），保存退出。
+# 建议先备份现有清单：crontab -l 2>/dev/null > /tmp/crontab.bak
+#
+#   每分钟调用；stdout+stderr 统一落日志（脚本动作记录与意外报错都不会丢）。
+#   平时日志为空 = 没出过事 = 正常；有内容即为自愈/报错留痕（每条带时间戳）。
+#
+# nano 保存：Ctrl+O 回车 Ctrl+X；vim 保存：Esc 后 :wq 回车
+
+* * * * * /usr/local/bin/watchdog.sh <你的容器名> >> /var/log/<你的容器名>-watchdog.log 2>&1
