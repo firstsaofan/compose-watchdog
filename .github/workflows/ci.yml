@@ -1,0 +1,51 @@
+# 最小 CI：与 AGENTS.md 的"改脚本后强制校验"等价，push/PR 自动把关
+# 四道关：bash -n 语法 → shellcheck 静态检查 → *.sh 必须 LF → 缺参守卫 exit=2
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: bash 语法检查（bash -n）
+        run: bash -n watchdog.sh
+
+      - name: shellcheck 静态检查
+        run: |
+          # ubuntu-latest 通常自带 shellcheck；缺失时才装（仅发生在 CI 的 runner 上）
+          if ! command -v shellcheck >/dev/null 2>&1; then
+            sudo apt-get update -q
+            sudo apt-get install -y -q shellcheck
+          fi
+          shellcheck --version
+          shellcheck watchdog.sh
+
+      - name: 行尾必须是 LF（*.sh CRLF 即缺陷）
+        run: |
+          # 用 git 自己的 EOL 判定（索引 + 工作区），避免依赖 grep 对 CR 字节的匹配行为
+          git ls-files --eol -- '*.sh'
+          if git ls-files --eol -- '*.sh' | grep -Eq 'crlf|mixed'; then
+            echo "::error::*.sh 出现 CRLF/混合行尾（防线见 .gitattributes: *.sh text eol=lf）"
+            exit 1
+          fi
+
+      - name: 缺参守卫（无参数应打印用法并 exit=2，stdout 必须为空）
+        run: |
+          set +e
+          bash watchdog.sh >stdout.log 2>stderr.log
+          code=$?
+          set -e
+          echo "--- stderr ---"
+          cat stderr.log
+          test "$code" -eq 2
+          test ! -s stdout.log

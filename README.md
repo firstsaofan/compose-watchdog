@@ -66,6 +66,28 @@
 
 ---
 
+## 新用户引导：你需要提供什么？
+
+**只有一件事**：目标服务的**容器名**（第一参数）。其余全部有默认值。
+
+| 你要提供 | 我们已替你默认 / 准备好 |
+|---------|------------------------|
+| 容器名（必须由 `docker compose` 创建） | 部署目录、compose 文件路径、服务名 → 运行时从**容器标签**自动读取，零配置 |
+| 应用内部端口（用于探活） | healthcheck 命令模板与参数建议（15s / 5s / 3 次 / 60s）见下方「快速开始」 |
+| —— | 日志路径 `/var/log/<容器名>-watchdog.log` 与 crontab 模板（`examples/crontab`）已写好 |
+| —— | **不需要任何密钥 / token / API key**：脚本只调本机 `docker` CLI，不联网、不持有凭据 |
+| 可选 | 外部拨测告警（如 Uptime Kuma）承担"喊人"一角，见「红线与最佳实践」第 5 条 |
+
+**安全默认（已配置，无需你操作）**：
+
+- 全仓库示例只用占位符 `<你的容器名>` / `<你的IP>` / `<你的KEY>`，**无任何真实环境信息**
+- 凭据类文件（`.env`、`*.pem`、`*.key`、`id_rsa*` 等 20+ 模式）已被 `.gitignore` 拦截，
+  **永不入库**——误放进来 `git status` 也看不见
+- 改脚本有 CI 四道关兜底：`bash -n` + shellcheck + LF 检查 + 缺参守卫
+- 给 AI 代理用的操作红线见 [AGENTS.md](AGENTS.md)，浓缩版入口见 [SKILL.md](SKILL.md)
+
+---
+
 ## 快速开始
 
 ### 1. 给目标服务加 healthcheck（compose 里追加）
@@ -197,6 +219,9 @@ tail -f /var/log/<容器名>-watchdog.log
 3. 演习时"恢复 compose 文件"必须紧跟"坏探活重建"，否则进入重建循环
 4. **没有 healthcheck = 看门狗形同虚设**（状态恒空，永不触发）——部署前必查
 5. 建议配合**外部拨测告警**（独立机器）组成三角：感知（healthcheck）→ 自愈（watchdog）→ 喊人（告警）
+6. **凭据与脱敏**：示例 / 文档一律占位符（`<你的容器名>`、`<你的IP>`、`<你的KEY>`）；
+   `.env`、`*.pem`、`*.key`、`id_rsa*` 等凭据文件已被 `.gitignore` 拦截，**禁止 `git add -f` 绕过**；
+   AI 代理不得把任何密钥 / 凭据内容读进对话、日志或外部请求（本工具本身不需要任何凭据）
 
 ---
 
@@ -204,19 +229,31 @@ tail -f /var/log/<容器名>-watchdog.log
 
 ```
 compose-watchdog/
-├── README.md            # 本文
-├── LICENSE              # MIT
-├── watchdog.sh          # 主脚本（唯一运行时文件）
+├── README.md                # 本文（人读完整文档）
+├── AGENTS.md                # 给 AI 代理的操作说明（红线 / 强制校验）
+├── SKILL.md                 # Skill 入口：通用 agent 一键加载的浓缩操作手册
+├── LICENSE                  # MIT
+├── watchdog.sh              # 主脚本（唯一运行时文件）
+├── .gitattributes           # *.sh 强制 LF，防 CRLF 进历史（关键防线）
+├── .gitignore               # 忽略本地日志等杂项
+├── .github/
+│   └── workflows/ci.yml     # CI：bash -n + shellcheck + LF 检查 + 缺参守卫
 └── examples/
-    └── crontab          # crontab 示例行
+    └── crontab              # crontab 示例行
 ```
+
+> **AI 代理请注意**：仓库根的 [AGENTS.md](AGENTS.md) 是给 AI 看的极简操作说明
+> （能动什么 / 不能动什么 / 改完必跑的校验），Codex、Cursor、Gemini CLI 等工具会自动读取；
+> 人读的完整文档才是本 README。
 
 ## 开始你自己的仓库
 
+想把这些文件用作**你自己新仓库的起点**（拷文件即可，不必 fork 继承历史）：
+
 ```bash
-cd compose-watchdog
+cd compose-watchdog        # 或你存放这 4 个文件的目录
 git init
-# 建议补一个 .gitattributes 防 CRLF：
+# 补 .gitattributes 防 CRLF（本仓库已自带同款，拷贝时带上就不用再建）：
 printf '*.sh text eol=lf\n.gitattributes text eol=lf\n' > .gitattributes
 git add . && git commit -m "init: compose-watchdog - healthcheck-driven self-healing for docker compose"
 ```

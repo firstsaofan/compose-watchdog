@@ -1,0 +1,43 @@
+# ─────────────────────────────────────────────
+# compose-watchdog .gitignore
+# 原则：仓库只有文档 + 单文件脚本，不产生构建产物；
+#       凭据类文件一律拦截、绝不入库（README 红线第 6 条）。
+# ─────────────────────────────────────────────
+
+# 本地日志（脚本在服务器上写 /var/log，仓库本身不产生日志）
+*.log
+
+# ── 环境变量 / 密钥 / 证书 / 凭据：永不入库 ──
+.env
+.env.*
+*.env
+*.pem
+*.key
+*.p12
+*.pfx
+*.ppk
+*.gpg
+*.asc
+*.keystore
+*.jks
+id_rsa*
+id_ed25519*
+*.kdbx
+wallet.dat
+.netrc
+.pgpass
+.npmrc
+credentials
+credential*
+*secret*
+*token*
+*password*
+.ssh/
+.aws/
+.gnupg/
+*.ovpn
+
+# ── 编辑器 / IDE 本地状态（不入库） ──
+.idea/
+.vscode/
+*.swp
